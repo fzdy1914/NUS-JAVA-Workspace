@@ -29,7 +29,6 @@ public class WebServer {
 		Socket s = ss.accept();
 		handleClientSocket(s);
 	} catch (IOException e) {
-		// TODO 自动生成的 catch 块
 		e.printStackTrace();
 	}
       // NEEDS IMPLEMENTATION
