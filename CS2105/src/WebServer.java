@@ -2,19 +2,22 @@
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.file.*;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.TimeZone;
 import java.io.*;
-
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 
 
 public class WebServer {
     public static void main(String[] args) {
-        // dummy value that is overwritten below
         int port = 8080;
         try {
-          port = Integer.parseInt(args[0]);
+            port = Integer.parseInt(args[0]);
         } catch (Exception e) {
-          System.out.println("Usage: java WebServer <port> " + port);
-          System.exit(0);
+            System.out.println("Usage: java WebServer <port> " + port);
+            System.exit(0);
         }
 
         WebServer serverInstance = new WebServer();
@@ -22,26 +25,17 @@ public class WebServer {
     }
 
     private void start(int port) {
-      System.out.println("Starting server on port " + port);
-
-      try {
-		ServerSocket ss = new ServerSocket(port);
-		Socket s = ss.accept();
-		handleClientSocket(s);
-	} catch (IOException e) {
-		e.printStackTrace();
-	}
-      // NEEDS IMPLEMENTATION
-      // You have to understand how sockets work and how to program
-      // them in Java.
-      // A good starting point is the socket tutorial from Oracle
-      // http://docs.oracle.com/javase/tutorial/networking/sockets/
-      // But there are a billion other resources on the Internet.
-      //
-      // Hints
-      // 1. You should set up the socket(s) and then call handleClientSocket.
-
-      
+        System.out.println("Starting server on port " + port);
+        
+        try {
+            ServerSocket ss = new ServerSocket(port);
+            while(true) {
+	            Socket s = ss.accept();
+	            new Thread(()-> handleClientSocket(s)).start();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -49,32 +43,35 @@ public class WebServer {
      * @param  client Socket that handles the client connection
      */
     private void handleClientSocket(Socket client) {
-      try {
-		BufferedReader input = new BufferedReader(new InputStreamReader(client.getInputStream()));
-		String line = null;
-		while((line = input.readLine()) != null) {
-			String[] requestWord = line.split("\\s+");
-			if(requestWord[0].equals("GET")) {
-				requestWord[1] = requestWord[1].split("/")[1];
-				HttpRequest request = new HttpRequest(requestWord[1], requestWord[2]);
-				sendHttpResponse(client, formHttpResponse(request));
-			}
-		}
-	} catch (IOException e) {
-		e.printStackTrace();
-	}  
-      // NEEDS IMPLEMENTATION
-      // This function is supposed to handle the request
-      // Things to do:
-      // (1) Read the request from the socket 
-      // (2) Parse the request and set variables of 
-      //     the HttpRequest class (at the end of the file!)
-      // (3) Form a response using formHttpResponse.
-      // (4) Send a response using sendHttpResponse.
-      //
-      // A BufferedReader might be useful here, but you can also
-      // solve this in many other ways.
+        try {
+            BufferedReader input = new BufferedReader(new InputStreamReader(client.getInputStream()));
+            String line = null;
+            while((line = input.readLine()) != null) {
+                String[] requestWord_1 = line.split("\\s+");
+                if(requestWord_1[0].equals("GET")) {
+                    HttpRequest request = new HttpRequest(requestWord_1[1], requestWord_1[2]);
+                    while((line = input.readLine()) != null) {
+                    	if(line.equals("")) {
+                    		break;
+                    	} else {
+                    		String[] requestWord_2 = line.split("\\s+");
+                    		if(requestWord_2[0].equals("if-modified-since:")) {
+                    			request.setDate(line.substring(19));
+                    			break;
+                    		}
+                    	}
+                    }
+                    sendHttpResponse(client, formHttpResponse(request));
+                    if(request.getRequestType().equals("HTTP/1.0")) {
+                    	client.close();
+                    	break;
+                    }
+                }
+            }
 
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -83,13 +80,13 @@ public class WebServer {
      * @param  response the response that should be send to the client
      */
     private void sendHttpResponse(Socket client, byte[] response) {
-    	try {
-			OutputStream output = client.getOutputStream();
-			output.write(response);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-    	
+        try {
+            OutputStream output = client.getOutputStream();
+            output.write(response);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     /**
@@ -98,37 +95,55 @@ public class WebServer {
      * @return a byte[] that contains the data that should be send to the client
      */
     private byte[] formHttpResponse(HttpRequest request) {
-    	File file = new File(request.getFilePath()); 	
-    	if (file.exists()) {
-	    	FileInputStream fis;
-			try {
-				fis = new FileInputStream(file);
-				byte[] bytes = fis.readAllBytes();
-				fis.close();
-				String successMessage = request.getRequestType() + " 200 OK\r\n" + 
-						String.format("Content-Length:" + file.length()+"\r\n") + 
-						"\r\n";
-		    	return concatenate(successMessage.getBytes(), bytes);
-			} catch (IOException e) {
+        File file = new File(request.getFilePath()); 	
+        if (file.exists()) {
+        	
+            FileInputStream fis;
+            try {
+            	SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss 'GMT'");
+            	sdf.setTimeZone(TimeZone.getTimeZone("GMT")); 
+            	fis = new FileInputStream(file);
+                byte[] buffer = new byte[1024000];
+                int len = fis.read(buffer);
+                fis.close();
+            	if(request.needToCheck() && !(sdf.parse(request.getDate()).before(new Date(file.lastModified())))) {
+            		return (request.getRequestType() + " 304 Not Modified\r\n" + "\r\n").getBytes();
+            	}
+            	/*
+            	byte[] tmpArray = new byte[arraySize];
+                int bytes = fileIn.read(tmpArray);// 暂存到字节数组中
+                if (bytes != -1) {
+                    array = new byte[bytes];// 字节数组长度为已读取长度
+                    System.arraycopy(tmpArray, 0, array, 0, bytes);// 复制已读取数据
+                    return bytes;
+                }
+                */
+            	//int len = 0;
+                //int dataCounter = 0;
+                //while ((len = fis.read(buffer)) != -1) {
+                //output.write(buffer, 0, len);
+                //dataCounter += len;
+                //} 
+            	if(file.length() < 100000000) {
+	        		String successMessage = request.getRequestType() + " 200 OK\r\n" + 
+	                    		String.format("Content-Length:" + file.length() +"\r\n") + 
+	                    		String.format("Last-Modified: " + sdf.format(file.lastModified()) + "\r\n") +
+	                    		"\r\n";
+	                return concatenate(successMessage.getBytes(), Arrays.copyOf(buffer, len));   
+            	}
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ParseException e) {
 				e.printStackTrace();
 			}
-    	}
-    	String errorMessage="HTTP/1.1 404 File Not Found\r\n"+
-    			"Content-Length:22\r\n"+
-				"\r\n"+
-				"<h1>404 Not Found</h1>";
-		return errorMessage.getBytes();
 
-    // NEEDS IMPLEMENTATION
-    // Make sure you follow the (modified) HTTP specification
-    // in the assignment regarding header fields and newlines
-    // You might want to use the concatenate method,
-    // but you do not have to.
-    // If you want to you can use a StringBuilder here
-    // but it is possible to solve this in multiple different ways.
-
+        }
+        String errorMessage = request.getRequestType() + " 404 Not Found\r\n"+
+            "Content-Length:22\r\n"+
+            "\r\n"+
+            "<h1>404 Not Found</h1>";
+        return errorMessage.getBytes();
     }
-    
 
     /**
      * Concatenates 2 byte[] into a single byte[]
@@ -148,22 +163,30 @@ public class WebServer {
 
 
 class HttpRequest {
-    // NEEDS IMPLEMENTATION
-    // This class should represent a HTTP request.
-    // Feel free to add more attributes if needed.
     private String filePath;
     private String type;
-    
+    private boolean check;
+    private String date;
+
     HttpRequest(String filePath, String type){
-    	this.filePath = "./" + filePath;
-    	this.type = type;
+        this.filePath = filePath.substring(1);
+        this.type = type;
+        this.check = false;
     }
     String getFilePath() {
         return filePath;
     }
     String getRequestType() {
-    	return type;
+        return type;
     }
-    // NEEDS IMPLEMENTATION
-    // If you add more private variables, add your getter methods here
+    void setDate(String date) {
+    	this.check = true;
+    	this.date = date;
+    }
+    boolean needToCheck()  {
+    	return check;
+    }
+    String getDate() {
+    	return date;
+    }
 }
