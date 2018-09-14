@@ -91,8 +91,7 @@ public class WebServer {
 	        		output.write((request.getRequestType() + " 304 Not Modified\r\n" + "\r\n").getBytes());
 	        		return; 
 	        	}
-	        	if(file.length() < 100000000) {
-	        		
+	        	if(file.length() < 1024000) {	
 		        	int len = fis.read(buffer);
 		        	fis.close();
 	        		String successMessage = request.getRequestType() + " 200 OK\r\n" + 
@@ -109,7 +108,21 @@ public class WebServer {
 	        			int len = 0;
 	        		    while ((len = fis.read(buffer)) != -1) {
 	        		        output.write(buffer, 0, len);
-	        		    } 
+	        		    }
+	        		    fis.close();
+	        		    return;
+	        		} else {
+	        			output.write((request.getRequestType() + " 200 OK\r\n" + 
+		        				String.format("Last-Modified: " + sdf.format(file.lastModified()) + "\r\n") +
+		        				"Transfer-Encoding: chunked\r\n" + "\r\n").getBytes());
+	        			int len = 0;
+	        		    while ((len = fis.read(buffer)) != -1) {
+	        		    	output.write((Integer.toHexString(len) + "\r\n").getBytes());
+	        		        output.write(buffer, 0, len);
+	        		        output.write(("\r\n").getBytes());
+	        		    }
+	        		    output.write(("0\r\n\r\n").getBytes());
+	        		    fis.close();
 	        		    return;
 	        		}
 	        		
