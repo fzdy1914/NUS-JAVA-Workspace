@@ -61,89 +61,89 @@ public class WebServer {
                     		}
                     	}
                     }
-                    sendHttpResponse(client, formHttpResponse(request));
+                    formAndSendHttpResponse(client, request);
                     if(request.getRequestType().equals("HTTP/1.0")) {
                     	client.close();
                     	break;
                     }
                 }
             }
-
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     /**
-     * Sends a response back to the client
+     * Form a response and send it back to the client
      * @param  client Socket that handles the client connection
-     * @param  response the response that should be send to the client
-     */
-    private void sendHttpResponse(Socket client, byte[] response) {
-        try {
-            OutputStream output = client.getOutputStream();
-            output.write(response);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-    }
-
-    /**
-     * Form a response to an HttpRequest
      * @param  request the HTTP request
-     * @return a byte[] that contains the data that should be send to the client
      */
-    private byte[] formHttpResponse(HttpRequest request) {
-        File file = new File(request.getFilePath()); 	
-        if (file.exists()) {
-        	
-            FileInputStream fis;
-            try {
-            	SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss 'GMT'");
-            	sdf.setTimeZone(TimeZone.getTimeZone("GMT")); 
-            	fis = new FileInputStream(file);
-                byte[] buffer = new byte[1024000];
-                int len = fis.read(buffer);
-                fis.close();
-            	if(request.needToCheck() && !(sdf.parse(request.getDate()).before(new Date(file.lastModified())))) {
-            		return (request.getRequestType() + " 304 Not Modified\r\n" + "\r\n").getBytes();
-            	}
-            	/*
-            	byte[] tmpArray = new byte[arraySize];
-                int bytes = fileIn.read(tmpArray);// 暂存到字节数组中
-                if (bytes != -1) {
-                    array = new byte[bytes];// 字节数组长度为已读取长度
-                    System.arraycopy(tmpArray, 0, array, 0, bytes);// 复制已读取数据
-                    return bytes;
-                }
-                */
-            	//int len = 0;
-                //int dataCounter = 0;
-                //while ((len = fis.read(buffer)) != -1) {
-                //output.write(buffer, 0, len);
-                //dataCounter += len;
-                //} 
-            	if(file.length() < 100000000) {
+    private void formAndSendHttpResponse(Socket client, HttpRequest request) {
+    	try {
+    		OutputStream output = client.getOutputStream();		
+	    	File file = new File(request.getFilePath()); 	
+	        if (file.exists()) {
+	        	FileInputStream fis = new FileInputStream(file);
+	        	byte[] buffer = new byte[1024000];
+	        	SimpleDateFormat sdf = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss 'GMT'");
+	        	sdf.setTimeZone(TimeZone.getTimeZone("GMT")); 
+	        	if(request.needToCheck() && !(sdf.parse(request.getDate()).before(new Date(file.lastModified())))) {
+	        		output.write((request.getRequestType() + " 304 Not Modified\r\n" + "\r\n").getBytes());
+	        		return; 
+	        	}
+	        	if(file.length() < 100000000) {
+	        		
+		        	int len = fis.read(buffer);
+		        	fis.close();
 	        		String successMessage = request.getRequestType() + " 200 OK\r\n" + 
-	                    		String.format("Content-Length:" + file.length() +"\r\n") + 
-	                    		String.format("Last-Modified: " + sdf.format(file.lastModified()) + "\r\n") +
-	                    		"\r\n";
-	                return concatenate(successMessage.getBytes(), Arrays.copyOf(buffer, len));   
-            	}
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ParseException e) {
-				e.printStackTrace();
-			}
+	        				String.format("Content-Length:" + file.length() +"\r\n") + 
+	        				String.format("Last-Modified: " + sdf.format(file.lastModified()) + "\r\n") +
+ 	                  		"\r\n";
+	        		output.write(concatenate(successMessage.getBytes(), Arrays.copyOf(buffer, len)));
+	        		return;
+	        	} else {
+	        		if(request.getRequestType().equals("HTTP/1.0")) {
+	        			output.write((request.getRequestType() + " 200 OK\r\n" + 
+		        				String.format("Last-Modified: " + sdf.format(file.lastModified()) + "\r\n") +
+	 	                  		"\r\n").getBytes());
+	        			int len = 0;
+	        		    while ((len = fis.read(buffer)) != -1) {
+	        		        output.write(buffer, 0, len);
+	        		    } 
+	        		    return;
+	        		}
+	        		
+	        	}
+	        }    
+            String errorMessage = request.getRequestType() + " 404 Not Found\r\n"+
+            		"Content-Length:22\r\n"+
+            		"\r\n"+
+            		"<h1>404 Not Found</h1>";
+            output.write(errorMessage.getBytes());
+            return;
+	       
+	    } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ParseException e) {
+		    e.printStackTrace();
+		}
 
-        }
-        String errorMessage = request.getRequestType() + " 404 Not Found\r\n"+
-            "Content-Length:22\r\n"+
-            "\r\n"+
-            "<h1>404 Not Found</h1>";
-        return errorMessage.getBytes();
     }
+   	/*
+   	byte[] tmpArray = new byte[arraySize];
+       int bytes = fileIn.read(tmpArray);// 暂存到字节数组中
+       if (bytes != -1) {
+           array = new byte[bytes];// 字节数组长度为已读取长度
+           System.arraycopy(tmpArray, 0, array, 0, bytes);// 复制已读取数据
+           return bytes;
+       }
+       */
+   	//int len = 0;
+    //int dataCounter = 0;
+    //while ((len = fis.read(buffer)) != -1) {
+    //output.write(buffer, 0, len);
+    //dataCounter += len;
+    //} 
 
     /**
      * Concatenates 2 byte[] into a single byte[]
@@ -159,8 +159,6 @@ public class WebServer {
         return returnBuffer;
     }
 }
-
-
 
 class HttpRequest {
     private String filePath;
