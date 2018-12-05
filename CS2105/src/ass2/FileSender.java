@@ -1,3 +1,5 @@
+package ass2;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.net.*;
@@ -85,7 +87,6 @@ public class FileSender {
 			// Debug output
 			// System.out.println("Sent CRC:" + chksum + " Contents:" + bytesToHex(data));
 			sk.send(pkt);
-			Thread.sleep(1);
 			while(true) {
 				try {	
 					sk.receive(ack);
