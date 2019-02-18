@@ -1,3 +1,5 @@
+package ass1.taskA;
+
 import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
