@@ -1,7 +1,6 @@
 package ass1.challengeTask;
 
 import java.io.*;
-import java.math.*;
 import java.util.*;
 
 class CountingSwaps {
@@ -15,31 +14,56 @@ class CountingSwaps {
         // recurse into each subarray
         int M = (L + R) / 2;
         long swaps = 0;
+        int[] tempW = new int[temp.length];
         swaps += countSwaps(L, M, W, id, temp, D);
         swaps += countSwaps(M + 1, R, W, id, temp, D);
+
+        TreeSet<Node> set = new TreeSet<>(new Comparator<Node>() {
+            @Override
+            public int compare(Node o1, Node o2) {
+                if(o1.weight - o2.weight != 0) {
+                    return o1.weight - o2.weight;
+                } else {
+                    return o1.id - o2.id;
+                }
+            }
+        });
+
+        for(int i = 0; i < M - L + 1; i++) {
+            set.add(new Node(id[L + i], W[L + i] * 2));
+        }
 
         // sort by choosing the minimum of both subarrays
         int index1 = L, index2 = M + 1, index3 = 0;
         while (index1 <= M && index2 <= R) {
             if (id[index1] <= id[index2]) {
-                temp[index3++] = id[index1++];
+                set.remove(new Node(id[index1], W[index1] * 2));
+                temp[index3] = id[index1];
+                tempW[index3++] = W[index1++];
             } else {
-                // add number of swaps equal to number of elements remaining in left subarray
-                swaps += M - index1 + 1;
-                temp[index3++] = id[index2++];
+                swaps += set.tailSet(new Node(0, (W[index2] + D) * 2 + 1)).size();
+                swaps += set.headSet(new Node(0, (W[index2] - D) * 2 - 1)).size();
+                temp[index3] = id[index2];
+                tempW[index3++] = W[index2++];
             }
         }
 
         // add any remaining elements in left subarray
-        while (index1 <= M)
-            temp[index3++] = id[index1++];
+        while (index1 <= M) {
+            temp[index3] = id[index1];
+            tempW[index3++] = W[index1++];
+        }
 
         // add any remaining elements in right subarray
-        while (index2 <= R)
-            temp[index3++] = id[index2++];
+        while (index2 <= R) {
+            temp[index3] = id[index2];
+            tempW[index3++] = W[index2++];
+        }
 
         // transfer elements back into original array
         System.arraycopy(temp, 0, id, L, index3);
+        System.arraycopy(tempW, 0, W, L, index3);
+
         return swaps;
     }
 
@@ -88,5 +112,14 @@ class CountingSwaps {
             if (bufferPointer == bytesRead) fillBuffer();
             return buffer[bufferPointer++];
         }
+    }
+}
+
+class Node {
+    public int id;
+    public int weight;
+    Node(int id, int weight){
+        this.id = id;
+        this.weight = weight;
     }
 }
