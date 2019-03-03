@@ -1,5 +1,3 @@
-
-
 public class AVLTree<T extends Comparable<T>> {
     private AVLTreeNode<T> mRoot;   
 
