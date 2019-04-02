@@ -1,8 +1,6 @@
 package ass1;
 
 import java.net.*;
-import java.nio.ByteBuffer;
-import java.nio.file.*;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.TimeZone;
@@ -143,21 +141,6 @@ public class WebServer {
 		}
 
     }
-   	/*
-   	byte[] tmpArray = new byte[arraySize];
-       int bytes = fileIn.read(tmpArray);// 暂存到字节数组中
-       if (bytes != -1) {
-           array = new byte[bytes];// 字节数组长度为已读取长度
-           System.arraycopy(tmpArray, 0, array, 0, bytes);// 复制已读取数据
-           return bytes;
-       }
-       */
-   	//int len = 0;
-    //int dataCounter = 0;
-    //while ((len = fis.read(buffer)) != -1) {
-    //output.write(buffer, 0, len);
-    //dataCounter += len;
-    //} 
 
     /**
      * Concatenates 2 byte[] into a single byte[]

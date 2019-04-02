@@ -5,12 +5,15 @@ import java.util.*;
 public class Test {
 	Test test = null;
 
-	public static void main(String[] args) {
-		Test t = new Test();
-		t.test = new Test();
-		t.test.test = t;
-		System.out.println(t.test.test.test.test == t);
+	static String a = "1";
+	static String b = a + "c";
 
+	public static void main(String[] args) {
+		System.out.println(a);
+		System.out.println(b);
+		a = "111";
+		System.out.println(a);
+		System.out.println(b);
 
 	}
 	
