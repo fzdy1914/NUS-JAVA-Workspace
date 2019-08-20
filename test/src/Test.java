@@ -9,11 +9,7 @@ public class Test {
 	static String b = a + "c";
 
 	public static void main(String[] args) {
-		System.out.println(a);
-		System.out.println(b);
-		a = "111";
-		System.out.println(a);
-		System.out.println(b);
+		System.out.println(System.getProperty("os.name").toLowerCase().startsWith("win"));
 
 	}
 	
